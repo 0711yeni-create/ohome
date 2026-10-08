@@ -2,10 +2,14 @@ name: Build O.HOME APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,14 +31,28 @@ jobs:
           OHOME_URL: ${{ vars.OHOME_URL }}
         run: |
           if [ -z "$OHOME_URL" ]; then
-            echo "Repository variable OHOME_URL is required. Example: https://your-home.vercel.app" >&2
+            echo "Repository variable OHOME_URL is required." >&2
             exit 1
           fi
+
           node <<'NODE'
           const fs = require('fs');
           const url = process.env.OHOME_URL;
-          fs.writeFileSync('capacitor.config.ts', `import type { CapacitorConfig } from '@capacitor/cli';\n\nconst config: CapacitorConfig = {\n  appId: 'app.ohome.mobile',\n  appName: 'O.HOME',\n  webDir: 'public',\n  server: { url: ${JSON.stringify(url)}, cleartext: false },\n  android: { allowMixedContent: false },\n};\n\nexport default config;\n`);
+
+          fs.writeFileSync('capacitor.config.ts', `import type { CapacitorConfig } from '@capacitor/cli';
+
+          const config: CapacitorConfig = {
+            appId: 'app.ohome.mobile',
+            appName: 'O.HOME',
+            webDir: 'public',
+            server: { url: ${JSON.stringify(url)}, cleartext: false },
+            android: { allowMixedContent: false },
+          };
+
+          export default config;
+          `);
           NODE
+
           npx cap add android
 
       - name: Build debug APK
