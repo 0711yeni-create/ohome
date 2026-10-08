@@ -1,1 +1,77 @@
+name: Build O.HOME APK
 
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract O.HOME project
+        run: |
+          ZIP_FILE="$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)"
+          if [ -n "$ZIP_FILE" ]; then
+            unzip -q -o "$ZIP_FILE" \
+              -x "build-apk.yml" ".github/*" "APK_BUILD_README.md"
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Install Capacitor
+        run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Create Android wrapper
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const url = 'https://ohome-github-apk-1.vercel.app/';
+
+          fs.writeFileSync('capacitor.config.ts', `import type { CapacitorConfig } from '@capacitor/cli';
+
+          const config: CapacitorConfig = {
+            appId: 'app.ohome.mobile',
+            appName: 'O.HOME',
+            webDir: 'public',
+            server: {
+              url: ${JSON.stringify(url)},
+              cleartext: false
+            },
+            android: {
+              allowMixedContent: false
+            }
+          };
+
+          export default config;
+          `);
+          NODE
+
+          npx cap add android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OHOME-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
