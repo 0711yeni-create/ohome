@@ -31,6 +31,12 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Install web dependencies
         run: npm ci
 
