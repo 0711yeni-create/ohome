@@ -15,7 +15,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Extract O.HOME project
-        run: unzip -q OHome-GitHub-APK.zip
+        run: |
+          unzip -q -o OHome-GitHub-APK.zip \
+            -x "build-apk.yml" ".github/*" "APK_BUILD_README.md"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -23,7 +25,7 @@ jobs:
           node-version: 22
 
       - name: Install web dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Capacitor
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
@@ -47,8 +49,13 @@ jobs:
             appId: 'app.ohome.mobile',
             appName: 'O.HOME',
             webDir: 'public',
-            server: { url: ${JSON.stringify(url)}, cleartext: false },
-            android: { allowMixedContent: false },
+            server: {
+              url: ${JSON.stringify(url)},
+              cleartext: false
+            },
+            android: {
+              allowMixedContent: false
+            }
           };
 
           export default config;
